@@ -1,0 +1,401 @@
+name: Build RotateMaster IPA
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    # ── Génère le projet Xcode automatiquement ──────────────
+    # Pas besoin d'uploader un project.pbxproj !
+    - name: Générer le projet Xcode
+      run: |
+        python3 << 'PYEOF'
+        import os, uuid
+
+        # UUIDs uniques pour chaque objet du projet
+        APP_ID    = "AA000000000000000000000A"
+        APPD_ID   = "AA000000000000000000000B"
+        VC_ID     = "AA000000000000000000000C"
+        PLIST_ID  = "AA000000000000000000000D"
+        ENT_ID    = "AA000000000000000000000E"
+        BF_APPD   = "AA000000000000000000000F"
+        BF_VC     = "AA000000000000000000000G"
+        GRPROOT   = "AA000000000000000000000H"
+        GRPAPP    = "AA000000000000000000000I"
+        GRPPROD   = "AA000000000000000000000J"
+        TARGET    = "AA000000000000000000000K"
+        PROJECT   = "AA000000000000000000000L"
+        SRC_PHASE = "AA000000000000000000000M"
+        FRM_PHASE = "AA000000000000000000000N"
+        RES_PHASE = "AA000000000000000000000O"
+        CFG_DBG   = "AA000000000000000000000P"
+        CFG_REL   = "AA000000000000000000000Q"
+        CFG_TDBG  = "AA000000000000000000000R"
+        CFG_TREL  = "AA000000000000000000000S"
+        CFGLIST   = "AA000000000000000000000T"
+        CFGLISTP  = "AA000000000000000000000U"
+
+        pbxproj = f"""// !$*UTF8*$!
+{{
+\tarchiveVersion = 1;
+\tclasses = {{
+\t}};
+\tobjectVersion = 56;
+\tobjects = {{
+
+/* Begin PBXBuildFile section */
+\t\t{BF_APPD} /* AppDelegate.swift in Sources */ = {{isa = PBXBuildFile; fileRef = {APPD_ID}; }};
+\t\t{BF_VC} /* ViewController.swift in Sources */ = {{isa = PBXBuildFile; fileRef = {VC_ID}; }};
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+\t\t{APP_ID} /* RotateMaster.app */ = {{isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RotateMaster.app; sourceTree = BUILT_PRODUCTS_DIR; }};
+\t\t{APPD_ID} /* AppDelegate.swift */ = {{isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; }};
+\t\t{VC_ID} /* ViewController.swift */ = {{isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; }};
+\t\t{PLIST_ID} /* Info.plist */ = {{isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; }};
+\t\t{ENT_ID} /* entitlements.plist */ = {{isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = entitlements.plist; sourceTree = "<group>"; }};
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+\t\t{FRM_PHASE} = {{
+\t\t\tisa = PBXFrameworksBuildPhase;
+\t\t\tbuildActionMask = 2147483647;
+\t\t\tfiles = (
+\t\t\t);
+\t\t\trunOnlyForDeploymentPostprocessing = 0;
+\t\t}};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+\t\t{GRPROOT} = {{
+\t\t\tisa = PBXGroup;
+\t\t\tchildren = (
+\t\t\t\t{GRPAPP},
+\t\t\t\t{GRPPROD},
+\t\t\t);
+\t\t\tsourceTree = "<group>";
+\t\t}};
+\t\t{GRPAPP} /* RotateMaster */ = {{
+\t\t\tisa = PBXGroup;
+\t\t\tchildren = (
+\t\t\t\t{APPD_ID},
+\t\t\t\t{VC_ID},
+\t\t\t\t{PLIST_ID},
+\t\t\t\t{ENT_ID},
+\t\t\t);
+\t\t\tpath = RotateMaster;
+\t\t\tsourceTree = "<group>";
+\t\t}};
+\t\t{GRPPROD} /* Products */ = {{
+\t\t\tisa = PBXGroup;
+\t\t\tchildren = (
+\t\t\t\t{APP_ID},
+\t\t\t);
+\t\t\tname = Products;
+\t\t\tsourceTree = "<group>";
+\t\t}};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+\t\t{TARGET} /* RotateMaster */ = {{
+\t\t\tisa = PBXNativeTarget;
+\t\t\tbuildConfigurationList = {CFGLIST};
+\t\t\tbuildPhases = (
+\t\t\t\t{SRC_PHASE},
+\t\t\t\t{FRM_PHASE},
+\t\t\t\t{RES_PHASE},
+\t\t\t);
+\t\t\tbuildRules = (
+\t\t\t);
+\t\t\tdependencies = (
+\t\t\t);
+\t\t\tname = RotateMaster;
+\t\t\tproductName = RotateMaster;
+\t\t\tproductReference = {APP_ID};
+\t\t\tproductType = "com.apple.product-type.application";
+\t\t}};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+\t\t{PROJECT} /* Project object */ = {{
+\t\t\tisa = PBXProject;
+\t\t\tattributes = {{
+\t\t\t\tBuildIndependentTargetsInParallel = 1;
+\t\t\t\tLastSwiftUpdateCheck = 1500;
+\t\t\t\tLastUpgradeCheck = 1500;
+\t\t\t}};
+\t\t\tbuildConfigurationList = {CFGLISTP};
+\t\t\tcompatibilityVersion = "Xcode 14.0";
+\t\t\tdevelopmentRegion = fr;
+\t\t\thasScannedForEncodings = 0;
+\t\t\tknownRegions = (
+\t\t\t\ten,
+\t\t\t\tBase,
+\t\t\t);
+\t\t\tmainGroup = {GRPROOT};
+\t\t\tproductRefGroup = {GRPPROD};
+\t\t\tprojectDirPath = "";
+\t\t\tprojectRoot = "";
+\t\t\ttargets = (
+\t\t\t\t{TARGET},
+\t\t\t);
+\t\t}};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+\t\t{RES_PHASE} = {{
+\t\t\tisa = PBXResourcesBuildPhase;
+\t\t\tbuildActionMask = 2147483647;
+\t\t\tfiles = (
+\t\t\t);
+\t\t\trunOnlyForDeploymentPostprocessing = 0;
+\t\t}};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+\t\t{SRC_PHASE} = {{
+\t\t\tisa = PBXSourcesBuildPhase;
+\t\t\tbuildActionMask = 2147483647;
+\t\t\tfiles = (
+\t\t\t\t{BF_APPD} /* AppDelegate.swift in Sources */,
+\t\t\t\t{BF_VC} /* ViewController.swift in Sources */,
+\t\t\t);
+\t\t\trunOnlyForDeploymentPostprocessing = 0;
+\t\t}};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+\t\t{CFG_DBG} /* Debug */ = {{
+\t\t\tisa = XCBuildConfiguration;
+\t\t\tbuildSettings = {{
+\t\t\t\tALWAYS_SEARCH_USER_PATHS = NO;
+\t\t\t\tCODE_SIGN_IDENTITY = "";
+\t\t\t\tCODE_SIGNING_ALLOWED = NO;
+\t\t\t\tCODE_SIGNING_REQUIRED = NO;
+\t\t\t\tDEAD_CODE_STRIPPING = NO;
+\t\t\t\tIPHONEOS_DEPLOYMENT_TARGET = 14.0;
+\t\t\t\tSDKROOT = iphoneos;
+\t\t\t\tSWIFT_OPTIMIZATION_LEVEL = "-Onone";
+\t\t\t}};
+\t\t\tname = Debug;
+\t\t}};
+\t\t{CFG_REL} /* Release */ = {{
+\t\t\tisa = XCBuildConfiguration;
+\t\t\tbuildSettings = {{
+\t\t\t\tALWAYS_SEARCH_USER_PATHS = NO;
+\t\t\t\tCODE_SIGN_IDENTITY = "";
+\t\t\t\tCODE_SIGNING_ALLOWED = NO;
+\t\t\t\tCODE_SIGNING_REQUIRED = NO;
+\t\t\t\tDEAD_CODE_STRIPPING = NO;
+\t\t\t\tIPHONEOS_DEPLOYMENT_TARGET = 14.0;
+\t\t\t\tSDKROOT = iphoneos;
+\t\t\t}};
+\t\t\tname = Release;
+\t\t}};
+\t\t{CFG_TDBG} /* Debug Target */ = {{
+\t\t\tisa = XCBuildConfiguration;
+\t\t\tbuildSettings = {{
+\t\t\t\tCODE_SIGN_IDENTITY = "";
+\t\t\t\tCODE_SIGNING_ALLOWED = NO;
+\t\t\t\tCODE_SIGNING_REQUIRED = NO;
+\t\t\t\tCODE_SIGN_ENTITLEMENTS = RotateMaster/entitlements.plist;
+\t\t\t\tCURRENT_PROJECT_VERSION = 1;
+\t\t\t\tINFOPLIST_FILE = RotateMaster/Info.plist;
+\t\t\t\tLD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+\t\t\t\tMARKETING_VERSION = 1.0;
+\t\t\t\tPRODUCT_BUNDLE_IDENTIFIER = com.local.rotatemaster;
+\t\t\t\tPRODUCT_NAME = "$(TARGET_NAME)";
+\t\t\t\tSUPPORTED_PLATFORMS = iphoneos;
+\t\t\t\tSUPPORTS_MACCATALYST = NO;
+\t\t\t\tSWIFT_VERSION = 5.0;
+\t\t\t\tTARGETED_DEVICE_FAMILY = 1;
+\t\t\t}};
+\t\t\tname = Debug;
+\t\t}};
+\t\t{CFG_TREL} /* Release Target */ = {{
+\t\t\tisa = XCBuildConfiguration;
+\t\t\tbuildSettings = {{
+\t\t\t\tCODE_SIGN_IDENTITY = "";
+\t\t\t\tCODE_SIGNING_ALLOWED = NO;
+\t\t\t\tCODE_SIGNING_REQUIRED = NO;
+\t\t\t\tCODE_SIGN_ENTITLEMENTS = RotateMaster/entitlements.plist;
+\t\t\t\tCURRENT_PROJECT_VERSION = 1;
+\t\t\t\tINFOPLIST_FILE = RotateMaster/Info.plist;
+\t\t\t\tLD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
+\t\t\t\tMARKETING_VERSION = 1.0;
+\t\t\t\tPRODUCT_BUNDLE_IDENTIFIER = com.local.rotatemaster;
+\t\t\t\tPRODUCT_NAME = "$(TARGET_NAME)";
+\t\t\t\tSUPPORTED_PLATFORMS = iphoneos;
+\t\t\t\tSUPPORTS_MACCATALYST = NO;
+\t\t\t\tSWIFT_VERSION = 5.0;
+\t\t\t\tTARGETED_DEVICE_FAMILY = 1;
+\t\t\t}};
+\t\t\tname = Release;
+\t\t}};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+\t\t{CFGLIST} /* Build configuration list for PBXNativeTarget */ = {{
+\t\t\tisa = XCConfigurationList;
+\t\t\tbuildConfigurations = (
+\t\t\t\t{CFG_TDBG},
+\t\t\t\t{CFG_TREL},
+\t\t\t);
+\t\t\tdefaultConfigurationIsVisible = 0;
+\t\t\tdefaultConfigurationName = Release;
+\t\t}};
+\t\t{CFGLISTP} /* Build configuration list for PBXProject */ = {{
+\t\t\tisa = XCConfigurationList;
+\t\t\tbuildConfigurations = (
+\t\t\t\t{CFG_DBG},
+\t\t\t\t{CFG_REL},
+\t\t\t);
+\t\t\tdefaultConfigurationIsVisible = 0;
+\t\t\tdefaultConfigurationName = Release;
+\t\t}};
+/* End XCConfigurationList section */
+\t}};
+\trootObject = {PROJECT};
+}}
+"""
+
+        os.makedirs("RotateMaster.xcodeproj", exist_ok=True)
+        with open("RotateMaster.xcodeproj/project.pbxproj", "w") as f:
+            f.write(pbxproj)
+        print("✅ project.pbxproj généré avec succès")
+        PYEOF
+
+        # Crée le dossier RotateMaster et copie les sources
+        mkdir -p RotateMaster
+        cp AppDelegate.swift  RotateMaster/
+        cp ViewController.swift RotateMaster/
+
+        # Crée Info.plist
+        cat > RotateMaster/Info.plist << 'PLIST'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleDisplayName</key><string>RotateMaster</string>
+  <key>CFBundleExecutable</key><string>$(EXECUTABLE_NAME)</string>
+  <key>CFBundleIdentifier</key><string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+  <key>CFBundleName</key><string>$(PRODUCT_NAME)</string>
+  <key>CFBundlePackageType</key><string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+  <key>CFBundleShortVersionString</key><string>1.0</string>
+  <key>CFBundleVersion</key><string>1</string>
+  <key>LSRequiresIPhoneOS</key><true/>
+  <key>UILaunchScreen</key><dict/>
+  <key>UISupportedInterfaceOrientations</key>
+  <array>
+    <string>UIInterfaceOrientationPortrait</string>
+    <string>UIInterfaceOrientationPortraitUpsideDown</string>
+    <string>UIInterfaceOrientationLandscapeLeft</string>
+    <string>UIInterfaceOrientationLandscapeRight</string>
+  </array>
+  <key>UIUserInterfaceStyle</key><string>Dark</string>
+  <key>UIApplicationSceneManifest</key>
+  <dict>
+    <key>UIApplicationSupportsMultipleScenes</key><false/>
+  </dict>
+</dict>
+</plist>
+PLIST
+
+        # Crée entitlements.plist
+        cat > RotateMaster/entitlements.plist << 'ENT'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>platform-application</key><true/>
+  <key>com.apple.private.springboard.rotation</key><true/>
+  <key>com.apple.private.security.no-sandbox</key><true/>
+  <key>com.apple.springboard.services</key><true/>
+</dict>
+</plist>
+ENT
+
+        echo "Structure finale :"
+        find . -not -path './.git/*' | sort
+
+    # ── Xcode ──────────────────────────────────────────────
+    - name: Sélectionner Xcode
+      run: |
+        if [ -d "/Applications/Xcode_15.4.app" ]; then
+          sudo xcode-select -s /Applications/Xcode_15.4.app
+        fi
+        echo "Xcode: $(xcodebuild -version)"
+
+    # ── Valider le projet ──────────────────────────────────
+    - name: Valider le projet
+      run: |
+        echo "=== Validation ==="
+        xcodebuild -project RotateMaster.xcodeproj -list
+        echo "✅ Projet valide"
+
+    # ── Compiler ───────────────────────────────────────────
+    - name: Compiler
+      run: |
+        xcodebuild \
+          -project RotateMaster.xcodeproj \
+          -scheme RotateMaster \
+          -configuration Release \
+          -sdk iphoneos \
+          -destination "generic/platform=iOS" \
+          CODE_SIGNING_ALLOWED=NO \
+          CODE_SIGNING_REQUIRED=NO \
+          CODE_SIGN_IDENTITY="" \
+          DEAD_CODE_STRIPPING=NO \
+          ONLY_ACTIVE_ARCH=NO \
+          build \
+          SYMROOT="$PWD/build" \
+          2>&1 | tee build_log.txt
+
+        if [ ${PIPESTATUS[0]} -ne 0 ]; then
+          echo "=== ERREURS ==="
+          grep "error:" build_log.txt | head -20
+          exit 1
+        fi
+        echo "✅ Compilation réussie !"
+
+    # ── Signer + packager ──────────────────────────────────
+    - name: Installer ldid
+      run: brew install ldid
+
+    - name: Signer + créer IPA
+      run: |
+        APP=$(find build -name "*.app" | grep -v BuildProductsPath | head -1)
+        echo "App: $APP"
+
+        brew install ldid
+        ldid -SRotateMaster/entitlements.plist "$APP/RotateMaster"
+        echo "✅ Entitlements appliqués"
+
+        mkdir -p Payload
+        cp -r "$APP" Payload/RotateMaster.app
+        zip -r RotateMaster.ipa Payload/
+        echo "✅ IPA créé: $(du -sh RotateMaster.ipa)"
+
+    # ── Télécharger ────────────────────────────────────────
+    - name: Upload IPA
+      uses: actions/upload-artifact@v4
+      with:
+        name: RotateMaster-IPA
+        path: RotateMaster.ipa
+        retention-days: 30
+
+    - name: Upload log si erreur
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-log
+        path: build_log.txt
+        retention-days: 7
