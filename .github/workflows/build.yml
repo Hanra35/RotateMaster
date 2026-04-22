@@ -16,7 +16,7 @@ jobs:
       - name: Generer le projet Xcode
         run: python3 generate_project.py
 
-      - name: Choisir Xcode 15.4
+      - name: Choisir Xcode
         run: |
           sudo xcode-select -s /Applications/Xcode_15.4.app
           xcodebuild -version
@@ -25,7 +25,7 @@ jobs:
         run: |
           xcodebuild \
             -project RotateMaster.xcodeproj \
-            -target RotateMaster \
+            -scheme RotateMaster \
             -configuration Release \
             -sdk iphoneos \
             -destination "generic/platform=iOS" \
@@ -38,7 +38,7 @@ jobs:
             SYMROOT="$PWD/build" \
             2>&1 | tee build_log.txt
           if [ ${PIPESTATUS[0]} -ne 0 ]; then
-            echo "=== ERREURS ===" && grep "error:" build_log.txt | head -20
+            grep "error:" build_log.txt | head -20
             exit 1
           fi
 
@@ -47,7 +47,7 @@ jobs:
 
       - name: Signer et creer IPA
         run: |
-          APP=$(find build -name "*.app" -not -path "*/Intermediates*" | head -1)
+          APP=$(find build -name "*.app" | grep -v BuildProductsPath | head -1)
           echo "App trouvee: $APP"
           ldid -SRotateMaster/entitlements.plist "$APP/RotateMaster"
           mkdir -p Payload
