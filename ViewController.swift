@@ -1,32 +1,60 @@
 import UIKit
-import Darwin   // pour dlopen / dlsym
+import Darwin  // donne accès à dlopen, dlsym, dlclose
 
-// ─────────────────────────────────────────────────────────────────
-//  SBSSetSystemForcedOrientationLock via dlsym
+// ═══════════════════════════════════════════════════════════
+//  Rotation SYSTÈME via SpringBoardServices (chargement dynamique)
 //
-//  @_silgen_name force le LINKER à résoudre le symbole au moment
-//  du build → "Undefined symbol" car le framework n'est pas public.
+//  @_silgen_name provoque une erreur de linker car le symbole
+//  n'est pas dans le SDK public. On utilise dlopen/dlsym à la
+//  place : le framework est chargé en mémoire AU MOMENT
+//  de l'exécution → zéro erreur de compilation/linker.
 //
-//  dlsym charge le symbole au RUNTIME depuis le framework privé →
-//  pas de dépendance au link, donc plus d'erreur de compilation.
-// ─────────────────────────────────────────────────────────────────
-private func sbs_setOrientationLock(_ orientation: Int32) {
+//  Valeurs :
+//    0 = auto (déverrouillé)
+//    1 = Portrait
+//    2 = Portrait inversé
+//    3 = Paysage gauche
+//    4 = Paysage droit
+// ═══════════════════════════════════════════════════════════
+
+func forceSystemRotation(_ value: Int32) {
+    // Chemin du framework privé SpringBoardServices
     let path = "/System/Library/PrivateFrameworks/SpringBoardServices.framework/SpringBoardServices"
-    guard let handle = dlopen(path, RTLD_NOW | RTLD_NODELETE) else { return }
-    guard let sym = dlsym(handle, "SBSSetSystemForcedOrientationLock") else {
-        dlclose(handle)
+
+    // Ouvre le framework dynamiquement
+    guard let handle = dlopen(path, RTLD_NOW) else {
+        print("[RotateMaster] dlopen échoué: \(String(cString: dlerror()))")
         return
     }
-    typealias Fn = @convention(c) (Int32) -> Void
-    unsafeBitCast(sym, to: Fn.self)(orientation)
+    defer { dlclose(handle) }
+
+    // Cherche le symbole SBSSetSystemForcedOrientationLock
+    guard let sym = dlsym(handle, "SBSSetSystemForcedOrientationLock") else {
+        print("[RotateMaster] Symbole introuvable")
+        return
+    }
+
+    // Cast le pointeur en fonction C typée
+    typealias LockFunc = @convention(c) (Int32) -> Void
+    let lockFn = unsafeBitCast(sym, to: LockFunc.self)
+
+    // Appelle la fonction — affecte TOUT le système iOS
+    lockFn(value)
+    print("[RotateMaster] Rotation système appliquée: \(value)")
 }
 
-// 0=auto  1=portrait  2=portrait inversé  3=paysage gauche  4=paysage droit
+// ═══════════════════════════════════════════════════════════
+//  Interface
+// ═══════════════════════════════════════════════════════════
+
 class ViewController: UIViewController {
+
+    // Label de statut mis à jour après chaque appui
+    private let statusLabel = UILabel()
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        view.backgroundColor = UIColor(red: 0.06, green: 0.06, blue: 0.12, alpha: 1)
+        view.backgroundColor = UIColor(red: 0.05, green: 0.05, blue: 0.10, alpha: 1)
         buildUI()
     }
 
@@ -41,81 +69,98 @@ class ViewController: UIViewController {
             scroll.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
 
-        let vstack = UIStackView()
-        vstack.axis = .vertical
-        vstack.spacing = 16
-        vstack.alignment = .fill
-        vstack.translatesAutoresizingMaskIntoConstraints = false
-        scroll.addSubview(vstack)
+        let stack = UIStackView()
+        stack.axis = .vertical
+        stack.spacing = 14
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        scroll.addSubview(stack)
         NSLayoutConstraint.activate([
-            vstack.topAnchor.constraint(equalTo: scroll.topAnchor, constant: 40),
-            vstack.leadingAnchor.constraint(equalTo: scroll.leadingAnchor, constant: 20),
-            vstack.trailingAnchor.constraint(equalTo: scroll.trailingAnchor, constant: -20),
-            vstack.bottomAnchor.constraint(equalTo: scroll.bottomAnchor, constant: -40),
-            vstack.widthAnchor.constraint(equalTo: scroll.widthAnchor, constant: -40),
+            stack.topAnchor.constraint(equalTo: scroll.topAnchor, constant: 36),
+            stack.leadingAnchor.constraint(equalTo: scroll.leadingAnchor, constant: 20),
+            stack.trailingAnchor.constraint(equalTo: scroll.trailingAnchor, constant: -20),
+            stack.bottomAnchor.constraint(equalTo: scroll.bottomAnchor, constant: -36),
+            stack.widthAnchor.constraint(equalTo: scroll.widthAnchor, constant: -40),
         ])
 
-        let title = lbl("🔄  RotateMaster", 26, .bold, .white)
-        let sub = lbl("Force la rotation partout\n(écran accueil + toutes les apps)", 13, .regular,
-                       UIColor(white: 1, alpha: 0.4))
-        sub.numberOfLines = 0
-        vstack.addArrangedSubview(title)
-        vstack.addArrangedSubview(sub)
-        vstack.setCustomSpacing(30, after: sub)
+        // ── Titre ──
+        stack.addArrangedSubview(makeLabel("🔄  RotateMaster", 26, .bold, .white))
+        stack.addArrangedSubview(makeLabel(
+            "Force la rotation sur tout iOS\n(écran accueil + toutes les apps)",
+            13, .regular, UIColor(white: 1, alpha: 0.4)))
+        stack.setCustomSpacing(24, after: stack.arrangedSubviews.last!)
 
-        let info = infoCard("⚡ La rotation s'applique immédiatement à tout le système iOS — écran d'accueil, apps, partout. Quitte l'app après avoir sélectionné l'orientation.")
-        vstack.addArrangedSubview(info)
-        vstack.setCustomSpacing(28, after: info)
+        // ── Info ──
+        let info = infoCard(
+            "⚡  Appuie sur une orientation → elle s'applique immédiatement partout.\n" +
+            "Quitte l'app après avoir choisi."
+        )
+        stack.addArrangedSubview(info)
+        stack.setCustomSpacing(26, after: info)
 
-        vstack.addArrangedSubview(sectionLbl("CHOISIR L'ORIENTATION"))
+        // ── Titre section ──
+        stack.addArrangedSubview(sectionLabel("CHOISIR L'ORIENTATION"))
 
-        let row1 = row([
+        // ── Boutons 2×2 ──
+        let row1 = hRow([
             rotBtn("⬆️", "Portrait\nnormal",   1),
             rotBtn("⬇️", "Portrait\ninversé",  2),
         ])
-        let row2 = row([
+        let row2 = hRow([
             rotBtn("◀️", "Paysage\ngauche",    3),
             rotBtn("▶️", "Paysage\ndroite",    4),
         ])
-        vstack.addArrangedSubview(row1)
-        vstack.addArrangedSubview(row2)
-        vstack.setCustomSpacing(12, after: row2)
+        stack.addArrangedSubview(row1)
+        stack.addArrangedSubview(row2)
+        stack.setCustomSpacing(10, after: row2)
 
-        let autoBtn = makeBtn("🔄   Rotation automatique (défaut)",
-                               bg: UIColor(white: 1, alpha: 0.07),
-                               fg: UIColor(white: 1, alpha: 0.55), tag: 0)
-        vstack.addArrangedSubview(autoBtn)
-        vstack.setCustomSpacing(30, after: autoBtn)
+        // ── Bouton Auto ──
+        let autoBtn = actionBtn("🔄   Rotation automatique (défaut)", tag: 0)
+        stack.addArrangedSubview(autoBtn)
+        stack.setCustomSpacing(24, after: autoBtn)
 
-        vstack.addArrangedSubview(sectionLbl("ORIENTATION ACTUELLE"))
+        // ── Statut ──
+        stack.addArrangedSubview(sectionLabel("STATUT"))
 
-        let statusCard = UIView()
-        statusCard.backgroundColor = UIColor(white: 1, alpha: 0.05)
-        statusCard.layer.cornerRadius = 12
-        statusCard.heightAnchor.constraint(equalToConstant: 60).isActive = true
-        vstack.addArrangedSubview(statusCard)
+        let card = UIView()
+        card.backgroundColor = UIColor(white: 1, alpha: 0.05)
+        card.layer.cornerRadius = 12
+        card.heightAnchor.constraint(equalToConstant: 54).isActive = true
+        stack.addArrangedSubview(card)
 
-        let statusLbl = UILabel()
-        statusLbl.text = "⬆️  Portrait normal (par défaut)"
-        statusLbl.font = .systemFont(ofSize: 15, weight: .semibold)
-        statusLbl.textColor = .white
-        statusLbl.textAlignment = .center
-        statusLbl.tag = 999
-        statusLbl.translatesAutoresizingMaskIntoConstraints = false
-        statusCard.addSubview(statusLbl)
+        statusLabel.text = "Aucune rotation forcée"
+        statusLabel.font = .systemFont(ofSize: 14, weight: .medium)
+        statusLabel.textColor = UIColor(white: 1, alpha: 0.55)
+        statusLabel.textAlignment = .center
+        statusLabel.translatesAutoresizingMaskIntoConstraints = false
+        card.addSubview(statusLabel)
         NSLayoutConstraint.activate([
-            statusLbl.centerXAnchor.constraint(equalTo: statusCard.centerXAnchor),
-            statusLbl.centerYAnchor.constraint(equalTo: statusCard.centerYAnchor),
+            statusLabel.centerXAnchor.constraint(equalTo: card.centerXAnchor),
+            statusLabel.centerYAnchor.constraint(equalTo: card.centerYAnchor),
         ])
     }
 
-    // MARK: - Actions
+    // MARK: - Action principale
 
-    @objc private func rotate(_ btn: UIButton) {
-        let ori = Int32(btn.tag)
-        applyRotation(ori)
-        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+    @objc private func onRotate(_ btn: UIButton) {
+        let v = Int32(btn.tag)
 
+        // ── 1. Appel SpringBoardServices (affecte tout le système) ──
+        forceSystemRotation(v)
+
+        // ── 2. Fallback UIDevice (au moins cette app) ──
+        let deviceOri: UIDeviceOrientation = {
+            switch v {
+            case 1: return .portrait
+            case 2: return .portraitUpsideDown
+            case 3: return .landscapeRight
+            case 4: return .landscapeLeft
+            default: return .unknown
+            }
+        }()
+        UIDevice.current.setValue(deviceOri.rawValue, forKey: "orientation")
+        UINavigationController.attemptRotationToDeviceOrientation()
+
+        // ── 3. Mise à jour UI ──
         let names: [Int32: String] = [
             0: "🔄  Auto",
             1: "⬆️  Portrait normal",
@@ -123,85 +168,54 @@ class ViewController: UIViewController {
             3: "◀️  Paysage gauche",
             4: "▶️  Paysage droit",
         ]
-        if let lbl = view.viewWithTag(999) as? UILabel {
-            lbl.text = names[ori] ?? "?"
-        }
+        statusLabel.text = names[v] ?? "?"
+        statusLabel.textColor = v == 0
+            ? UIColor(white: 1, alpha: 0.55)
+            : UIColor(red: 0.4, green: 1.0, blue: 0.6, alpha: 1)
 
-        UIView.animate(withDuration: 0.1, animations: { btn.alpha = 0.3 }) { _ in
-            UIView.animate(withDuration: 0.2) { btn.alpha = 1 }
+        // Flash bouton
+        UIView.animate(withDuration: 0.08, animations: { btn.alpha = 0.3 }) { _ in
+            UIView.animate(withDuration: 0.18) { btn.alpha = 1 }
         }
-    }
-
-    private func applyRotation(_ ori: Int32) {
-        // ── Méthode principale : SpringBoard via dlsym (affecte tout le système) ──
-        sbs_setOrientationLock(ori)
-
-        // ── Fallback : forcer l'orientation dans cette app (iOS 16+) ──
-        if #available(iOS 16.0, *) {
-            guard let scene = view.window?.windowScene else { return }
-            let mask: UIInterfaceOrientationMask
-            switch ori {
-            case 1:  mask = .portrait
-            case 2:  mask = .portraitUpsideDown
-            case 3:  mask = .landscapeLeft
-            case 4:  mask = .landscapeRight
-            default: mask = .all
-            }
-            scene.requestGeometryUpdate(.iOS(interfaceOrientations: mask))
-        } else {
-            // iOS 14-15
-            let deviceOri: UIDeviceOrientation
-            switch ori {
-            case 1:  deviceOri = .portrait
-            case 2:  deviceOri = .portraitUpsideDown
-            case 3:  deviceOri = .landscapeRight
-            case 4:  deviceOri = .landscapeLeft
-            default: deviceOri = .unknown
-            }
-            UIDevice.current.setValue(deviceOri.rawValue, forKey: "orientation")
-        }
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
     }
 
     override var supportedInterfaceOrientations: UIInterfaceOrientationMask { .all }
     override var shouldAutorotate: Bool { true }
 
-    // MARK: - UI helpers
+    // MARK: - Helpers UI
+
     private let purple = UIColor(red: 0.42, green: 0.27, blue: 0.98, alpha: 1)
 
-    private func lbl(_ t: String, _ sz: CGFloat, _ w: UIFont.Weight, _ c: UIColor) -> UILabel {
+    private func makeLabel(_ t: String, _ sz: CGFloat, _ w: UIFont.Weight, _ c: UIColor) -> UILabel {
         let l = UILabel()
         l.text = t
         l.font = .systemFont(ofSize: sz, weight: w)
         l.textColor = c
         l.textAlignment = .center
+        l.numberOfLines = 0
         return l
     }
 
-    private func sectionLbl(_ t: String) -> UILabel {
+    private func sectionLabel(_ t: String) -> UILabel {
         let l = UILabel()
         l.text = t
         l.font = .systemFont(ofSize: 10, weight: .semibold)
-        l.textColor = UIColor(white: 1, alpha: 0.3)
+        l.textColor = UIColor(white: 1, alpha: 0.28)
         l.textAlignment = .left
-        // kern via attributedText (évite l'extension UILabel qui peut causer des conflits)
-        l.attributedText = NSAttributedString(string: t, attributes: [
-            .kern: 1.4,
-            .foregroundColor: UIColor(white: 1, alpha: 0.3),
-            .font: UIFont.systemFont(ofSize: 10, weight: .semibold)
-        ])
         return l
     }
 
     private func infoCard(_ text: String) -> UIView {
         let card = UIView()
-        card.backgroundColor = UIColor(red: 0.1, green: 0.35, blue: 0.2, alpha: 0.35)
+        card.backgroundColor = UIColor(red: 0.08, green: 0.30, blue: 0.16, alpha: 0.5)
         card.layer.cornerRadius = 12
         card.layer.borderWidth = 1
-        card.layer.borderColor = UIColor(red: 0.2, green: 0.8, blue: 0.4, alpha: 0.3).cgColor
+        card.layer.borderColor = UIColor(red: 0.2, green: 0.75, blue: 0.35, alpha: 0.35).cgColor
         let l = UILabel()
         l.text = text
         l.font = .systemFont(ofSize: 12)
-        l.textColor = UIColor(red: 0.5, green: 1, blue: 0.6, alpha: 0.9)
+        l.textColor = UIColor(red: 0.5, green: 1, blue: 0.65, alpha: 0.9)
         l.numberOfLines = 0
         l.translatesAutoresizingMaskIntoConstraints = false
         card.addSubview(l)
@@ -214,38 +228,38 @@ class ViewController: UIViewController {
         return card
     }
 
-    private func rotBtn(_ emoji: String, _ text: String, _ tag: Int) -> UIButton {
+    private func rotBtn(_ emoji: String, _ label: String, _ tag: Int) -> UIButton {
         let b = UIButton(type: .system)
-        b.setTitle("\(emoji)\n\(text)", for: .normal)
+        b.setTitle("\(emoji)\n\(label)", for: .normal)
         b.titleLabel?.numberOfLines = 0
-        b.titleLabel?.textAlignment  = .center
+        b.titleLabel?.textAlignment = .center
         b.titleLabel?.font = .systemFont(ofSize: 13, weight: .semibold)
-        b.backgroundColor  = purple
+        b.backgroundColor = purple
         b.setTitleColor(.white, for: .normal)
         b.layer.cornerRadius = 14
         b.heightAnchor.constraint(equalToConstant: 80).isActive = true
         b.tag = tag
-        b.addTarget(self, action: #selector(rotate(_:)), for: .touchUpInside)
+        b.addTarget(self, action: #selector(onRotate(_:)), for: .touchUpInside)
         return b
     }
 
-    private func makeBtn(_ title: String, bg: UIColor, fg: UIColor, tag: Int) -> UIButton {
+    private func actionBtn(_ title: String, tag: Int) -> UIButton {
         let b = UIButton(type: .system)
         b.setTitle(title, for: .normal)
         b.titleLabel?.font = .systemFont(ofSize: 14, weight: .medium)
-        b.backgroundColor  = bg
-        b.setTitleColor(fg, for: .normal)
+        b.backgroundColor = UIColor(white: 1, alpha: 0.07)
+        b.setTitleColor(UIColor(white: 1, alpha: 0.6), for: .normal)
         b.layer.cornerRadius = 13
         b.layer.borderWidth = 1
         b.layer.borderColor = UIColor(white: 1, alpha: 0.1).cgColor
         b.heightAnchor.constraint(equalToConstant: 50).isActive = true
         b.tag = tag
-        b.addTarget(self, action: #selector(rotate(_:)), for: .touchUpInside)
+        b.addTarget(self, action: #selector(onRotate(_:)), for: .touchUpInside)
         return b
     }
 
-    private func row(_ btns: [UIView]) -> UIStackView {
-        let s = UIStackView(arrangedSubviews: btns)
+    private func hRow(_ views: [UIView]) -> UIStackView {
+        let s = UIStackView(arrangedSubviews: views)
         s.axis = .horizontal
         s.spacing = 12
         s.distribution = .fillEqually
